@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" type="image/png" href="icons/logo.png">
+    <title>Yatzy Royale by: James Tercenio</title>
+    <style>
+        :root {
+            --primary: #0b1020;
+            --panel: rgba(255, 255, 255, .10);
+            --panel-2: rgba(255, 255, 255, .16);
+            --panel-solid: #0f1630;
+            --text: #e9edf6;
+            --muted: rgba(233, 237, 246, .72);
+            --stroke: rgba(255, 255, 255, .18);
+
+            --accent: #ff3b5c;
+            --success: #19d28d;
+            --bot-color: #4aa3ff;
+            --locked: #ffb020;
+            --info: #9b7bff;
+
+            --hell: #b3001b;
+            --pvp: #ff7a18;
+            --tie: #94a3b8;
+
+            --radius-xl: 22px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+
+            --shadow-lg: 0 26px 70px rgba(0, 0, 0, .55);
+            --shadow-md: 0 14px 40px rgba(0, 0, 0, .40);
+            --shadow-sm: 0 8px 20px rgba(0, 0, 0, .25);
+
+            /* difficulty-driven tokens (overridden by body.*) */
+            --fillbar-color: var(--bot-color);
+            --border-color: rgba(255, 255, 255, .22);
+            --dice-color: rgba(255, 255, 255, .14);
+            --icon-color: rgba(255, 255, 255, .18);
+            --score-color: var(--success);
+            --scores-bg: rgba(255, 255, 255, .10);
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            background: radial-gradient(1200px 800px at 20% 10%, rgba(74, 163, 255, .22), transparent 60%),
+                radial-gradient(1100px 800px at 80% 30%, rgba(155, 123, 255, .18), transparent 55%),
+                radial-gradient(1000px 800px at 55% 85%, rgba(25, 210, 141, .14), transparent 60%),
+                #050815;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        /* app shell */
+        .game-container {
+            width: min(980px, 100%);
+            max-height: calc(100vh - 32px);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 14px;
+            border-radius: var(--radius-xl);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .06));
+            border: 1px solid var(--stroke);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(14px);
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        /* subtle noise */
+        .game-container:before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px);
+            background-size: 18px 18px;
+            opacity: .25;
+            pointer-events: none;
+            mask-image: radial-gradient(circle at 40% 10%, black, transparent 60%);
+        }
+
+        /* top HUD (reusing existing markup) */
+        .top-right-ui {
+            position: static;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 12px;
+            border-radius: var(--radius-lg);
+            background: rgba(0, 0, 0, .18);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .top-right-ui .ui-box {
+            height: 42px;
+            min-width: 130px;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .18);
+            background: rgba(255, 255, 255, .10);
+            color: var(--text);
+            font-weight: 800;
+            letter-spacing: .6px;
+            font-size: .82rem;
+            text-transform: uppercase;
+            user-select: none;
+            cursor: default;
+            transition: transform .16s ease, background .16s ease, border-color .16s ease;
+        }
+
+        .top-right-ui button.ui-box {
+            cursor: pointer;
+        }
+
+        .top-right-ui .ui-box:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, .14);
+            border-color: rgba(255, 255, 255, .26);
+        }
+
+        .reset-btn {
+            background: rgba(255, 59, 92, .20) !important;
+            border-color: rgba(255, 59, 92, .35) !important;
+        }
+
+        .mute-btn {
+            background: rgba(155, 123, 255, .18) !important;
+            border-color: rgba(155, 123, 255, .35) !important;
+        }
+
+        .info-btn {
+            background: rgba(74, 163, 255, .16) !important;
+            border-color: rgba(74, 163, 255, .32) !important;
+        }
+
+        /* score totals banner */
+        .scores {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: var(--radius-lg);
+            background: var(--scores-bg);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow-sm);
+            font-weight: 900;
+            font-size: clamp(1.05rem, 2.3vw, 1.55rem);
+        }
+
+        .scores span {
+            white-space: nowrap;
+        }
+
+        #p-total {
+            color: var(--score-color);
+            text-shadow: 0 0 18px rgba(25, 210, 141, .25);
+        }
+
+        #b-total {
+            color: var(--bot-color);
+            text-shadow: 0 0 18px rgba(74, 163, 255, .20);
+        }
+
+        /* turn indicator */
+        .turn-indicator {
+            padding: 12px 14px;
+            border-radius: 999px;
+            text-align: center;
+            font-weight: 900;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, .16);
+            background: rgba(0, 0, 0, .22);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .player-turn {
+            background: rgba(25, 210, 141, .20);
+            border-color: rgba(25, 210, 141, .35);
+        }
+
+        .bot-turn {
+            background: rgba(74, 163, 255, .18);
+            border-color: rgba(74, 163, 255, .32);
+        }
+
+        .p2-turn {
+            background: rgba(255, 122, 24, .18);
+            border-color: rgba(255, 122, 24, .35);
+        }
+
+        .hell-turn {
+            background: rgba(179, 0, 27, .22);
+            border-color: rgba(179, 0, 27, .45);
+            text-shadow: 0 0 10px rgba(255, 0, 0, .25);
+        }
+
+        /* main content layout */
+        .score-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+            border-radius: var(--radius-lg);
+            background: rgba(0, 0, 0, .18);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow-sm);
+            overflow: auto;
+            scrollbar-width: thin;
+        }
+
+        .score-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(255, 255, 255, .12);
+            transition: transform .14s ease, border-color .14s ease, background .14s ease;
+            overflow: hidden;
+        }
+
+        .score-item:hover:not(.taken) {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, .10);
+            border-color: rgba(255, 255, 255, .22);
+            cursor: pointer;
+        }
+
+        .score-item.can-hover:hover:not(.taken)::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 3px;
+            width: 0%;
+            background: var(--fillbar-color);
+            box-shadow: 0 0 14px color-mix(in srgb, var(--fillbar-color), transparent 55%);
+            animation: fillBar 2s linear forwards;
+        }
+
+        @keyframes fillBar {
+            from {
+                width: 0%
+            }
+
+            to {
+                width: 100%
+            }
+        }
+
+        .score-btn {
+            border: 0;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            padding: 0;
+            flex: 1;
+            color: var(--text);
+            font-weight: 800;
+            pointer-events: none;
+            /* clickable is row itself */
+        }
+
+        .score-btn span {
+            font-size: .95rem;
+            line-height: 1.1;
+        }
+
+        .category-icon,
+        .icon-placeholder {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, .22);
+            border: 1px solid rgba(255, 255, 255, .14);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            font-weight: 900;
+            font-size: .75rem;
+            flex-shrink: 0;
+        }
+
+        .category-icon {
+            object-fit: contain;
+            padding: 4px;
+            background: rgba(255, 255, 255, .10);
+        }
+
+        .score-values {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 96px;
+            justify-content: flex-end;
+            font-weight: 900;
+        }
+
+        .player-score,
+        .bot-score {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.05rem;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, .18);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .22);
+            flex-shrink: 0;
+        }
+
+        .player-score {
+            color: var(--score-color);
+        }
+
+        .bot-score {
+            color: var(--bot-color);
+        }
+
+        .pvp-p2-score {
+            color: var(--pvp) !important;
+        }
+
+        .potential {
+            opacity: .62;
+            font-style: italic;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: .38
+            }
+
+            50% {
+                opacity: .82
+            }
+        }
+
+        /* dice + controls */
+        .controls-box {
+            padding: 14px;
+            border-radius: var(--radius-lg);
+            background: rgba(0, 0, 0, .18);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 6px 0 14px;
+            min-height: 84px;
+        }
+
+        .die {
+            width: 74px;
+            height: 74px;
+            aspect-ratio: 1 / 1;
+            border-radius: 14px;
+            background: var(--dice-color);
+            border: 1px solid rgba(255, 255, 255, .16);
+            box-shadow: 0 10px 18px rgba(0, 0, 0, .25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            cursor: pointer;
+            transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .die:before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            background: radial-gradient(180px 120px at 30% 20%, rgba(255, 255, 255, .18), transparent 55%);
+            pointer-events: none;
+        }
+
+        .die:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 26px rgba(0, 0, 0, .33);
+            border-color: rgba(255, 255, 255, .28);
+        }
+
+        .die img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25));
+        }
+
+        .die.locked {
+            background: rgba(255, 176, 32, .22);
+            border-color: rgba(255, 176, 32, .45);
+            box-shadow: 0 0 0 2px rgba(255, 176, 32, .18), 0 14px 30px rgba(0, 0, 0, .38);
+            transform: translateY(-6px);
+        }
+
+        @keyframes shake {
+            0% {
+                transform: rotate(4deg)
+            }
+
+            50% {
+                transform: rotate(-4deg)
+            }
+
+            100% {
+                transform: rotate(4deg)
+            }
+        }
+
+        .rolling {
+            animation: shake .10s infinite;
+        }
+
+        button#roll-btn {
+            width: clamp(220px, 25%, 320px);
+            margin: 0 auto;
+            display: block;
+
+            border: 0;
+            padding: 14px 16px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(255, 59, 92, .95), rgba(255, 122, 24, .90));
+            color: white;
+            font-weight: 950;
+            letter-spacing: 1px;
+            font-size: 1.12rem;
+            cursor: pointer;
+            box-shadow: 0 14px 26px rgba(255, 59, 92, .18), 0 10px 18px rgba(0, 0, 0, .30);
+            transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+        }
+
+        button#roll-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+
+        button#roll-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        button#roll-btn:disabled {
+            background: rgba(148, 163, 184, .25);
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: .75;
+        }
+
+        /* modals */
+        #info-modal,
+        #result-modal,
+        #reset-modal,
+        #score-info-modal,
+        #hell-notification-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .78);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            width: min(520px, 92vw);
+            padding: 26px 22px;
+            border-radius: 24px;
+            background: rgba(10, 14, 30, .92);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: var(--shadow-lg);
+            color: var(--text);
+            position: relative;
+            text-align: center;
+        }
+
+        .modal-content h1,
+        .modal-content h2 {
+            margin: 0 0 10px;
+            letter-spacing: -.5px;
+        }
+
+        .modal-content p,
+        .modal-content li {
+            color: var(--muted);
+        }
+
+        .modal-content ul {
+            padding-left: 18px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .difficulty-btn,
+        .info-trigger-btn,
+        .confirm-btn,
+        .cancel-btn,
+        .menu-btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 14px 18px;
+            min-width: 160px;
+            font-weight: 900;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, .25);
+            transition: transform .14s ease, filter .14s ease;
+        }
+
+        .difficulty-btn:hover,
+        .info-trigger-btn:hover,
+        .confirm-btn:hover,
+        .cancel-btn:hover,
+        .menu-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+
+        .easy {
+            background: linear-gradient(135deg, #16c784, #19d28d);
+        }
+
+        .med {
+            background: linear-gradient(135deg, #3b82f6, #4aa3ff);
+        }
+
+        .hard {
+            background: linear-gradient(135deg, #f59e0b, #ffb020);
+        }
+
+        .hell {
+            background: linear-gradient(135deg, #b3001b, #ff3b5c);
+            border: 1px solid rgba(255, 59, 92, .55);
+            box-shadow: 0 0 24px rgba(255, 59, 92, .25);
+        }
+
+        .pvp {
+            background: linear-gradient(135deg, #ff7a18, #f59e0b);
+        }
+
+        .info-trigger-btn {
+            background: linear-gradient(135deg, #9b7bff, #4aa3ff);
+        }
+
+        .confirm-btn {
+            background: linear-gradient(135deg, #ff3b5c, #ff7a18);
+        }
+
+        .cancel-btn {
+            background: rgba(148, 163, 184, .35);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: none;
+        }
+
+        /* lobby */
+        #lobby {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 22px;
+            color: var(--text);
+            text-align: center;
+            background:
+                radial-gradient(900px 700px at 25% 20%, rgba(74, 163, 255, .28), transparent 60%),
+                radial-gradient(900px 700px at 80% 35%, rgba(255, 59, 92, .22), transparent 55%),
+                radial-gradient(900px 700px at 55% 80%, rgba(25, 210, 141, .16), transparent 60%),
+                #030513;
+        }
+
+        #lobby .menu-group {
+            width: min(520px, 92vw);
+            gap: 12px;
+        }
+
+        #lobby img {
+            filter: drop-shadow(0 16px 35px rgba(0, 0, 0, .55));
+        }
+
+        /* turn modal */
+        #turn-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .turn-modal-content {
+            padding: 26px 44px;
+            border-radius: 999px;
+            font-size: clamp(1.4rem, 4vw, 3rem);
+            font-weight: 950;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, .18);
+            box-shadow: 0 0 100px rgba(0, 0, 0, .55);
+            animation: modalPop 1.2s cubic-bezier(.175, .885, .32, 1.275) forwards;
+        }
+
+        @keyframes modalPop {
+            0% {
+                transform: scale(.55);
+                opacity: 0
+            }
+
+            20% {
+                transform: scale(1.06);
+                opacity: 1
+            }
+
+            80% {
+                transform: scale(1);
+                opacity: 1
+            }
+
+            100% {
+                transform: scale(1.45);
+                opacity: 0
+            }
+        }
+
+        .player-modal-bg {
+            background: rgba(25, 210, 141, .26);
+        }
+
+        .bot-modal-bg {
+            background: rgba(74, 163, 255, .22);
+        }
+
+        .p2-modal-bg {
+            background: rgba(255, 122, 24, .22);
+        }
+
+        .tie-modal-bg {
+            background: rgba(148, 163, 184, .22);
+        }
+
+        .hell-modal-bg {
+            background: rgba(179, 0, 27, .30);
+            box-shadow: 0 0 120px rgba(255, 0, 0, .28);
+        }
+
+        /* party overlay */
+        #party-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .disco-active {
+            display: block !important;
+            animation: disco .35s infinite;
+        }
+
+        @keyframes disco {
+            0% {
+                background: rgba(255, 59, 92, .22)
+            }
+
+            33% {
+                background: rgba(25, 210, 141, .18)
+            }
+
+            66% {
+                background: rgba(74, 163, 255, .18)
+            }
+
+            100% {
+                background: rgba(255, 59, 92, .22)
+            }
+        }
+
+        /* difficulty backgrounds + tokens */
+        body.easy {
+            background: radial-gradient(1200px 800px at 20% 10%, rgba(25, 210, 141, .28), transparent 60%),
+                radial-gradient(1000px 800px at 80% 25%, rgba(74, 163, 255, .15), transparent 55%),
+                #050815;
+            --fillbar-color: #19d28d;
+            --dice-color: rgba(25, 210, 141, .16);
+            --icon-color: rgba(25, 210, 141, .22);
+            --score-color: #19d28d;
+            --scores-bg: rgba(25, 210, 141, .12);
+        }
+
+        body.medium {
+            background: radial-gradient(1200px 800px at 18% 12%, rgba(74, 163, 255, .30), transparent 60%),
+                radial-gradient(1000px 800px at 80% 35%, rgba(155, 123, 255, .15), transparent 55%),
+                #050815;
+            --fillbar-color: #4aa3ff;
+            --dice-color: rgba(74, 163, 255, .16);
+            --icon-color: rgba(74, 163, 255, .22);
+            --score-color: #4aa3ff;
+            --scores-bg: rgba(74, 163, 255, .12);
+        }
+
+        body.hard {
+            background: radial-gradient(1200px 800px at 18% 12%, rgba(255, 176, 32, .28), transparent 60%),
+                radial-gradient(1000px 800px at 80% 35%, rgba(255, 59, 92, .12), transparent 55%),
+                #050815;
+            --fillbar-color: #ffb020;
+            --dice-color: rgba(255, 176, 32, .16);
+            --icon-color: rgba(255, 176, 32, .22);
+            --score-color: #ffb020;
+            --scores-bg: rgba(255, 176, 32, .12);
+        }
+
+        body.hell {
+            background: radial-gradient(1200px 800px at 18% 12%, rgba(179, 0, 27, .30), transparent 62%),
+                radial-gradient(1000px 800px at 80% 35%, rgba(0, 0, 0, .35), transparent 55%),
+                #00010a;
+            --fillbar-color: #ff3b5c;
+            --dice-color: rgba(179, 0, 27, .18);
+            --icon-color: rgba(179, 0, 27, .22);
+            --score-color: #ff3b5c;
+            --scores-bg: rgba(179, 0, 27, .12);
+        }
+
+        body.pvp {
+            background: radial-gradient(1200px 800px at 18% 12%, rgba(155, 123, 255, .26), transparent 60%),
+                radial-gradient(1000px 800px at 80% 35%, rgba(255, 122, 24, .14), transparent 55%),
+                #050815;
+            --fillbar-color: #9b7bff;
+            --dice-color: rgba(155, 123, 255, .16);
+            --icon-color: rgba(155, 123, 255, .22);
+            --score-color: #9b7bff;
+            --scores-bg: rgba(155, 123, 255, .12);
+        }
+
+        /* trail effect (kept) */
+        .trail {
+            position: fixed;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background-color: rgba(74, 163, 255, 0.25);
+            box-shadow: 0 0 18px rgba(74, 163, 255, 0.35);
+            pointer-events: none;
+            z-index: 1000;
+            filter: blur(4px);
+            opacity: .85;
+        }
+
+        /* helper (kept for JS) */
+        .hidden {
+            display: none !important;
+        }
+
+        /* mobile */
+        @media (max-width: 820px) {
+            body {
+                padding: 0;
+            }
+
+            .game-container {
+                border-radius: 0;
+                max-height: 100vh;
+                height: 100vh;
+                padding: 14px;
+                padding-top: max(14px, env(safe-area-inset-top));
+                padding-bottom: max(14px, env(safe-area-inset-bottom));
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+            }
+
+            .top-right-ui {
+                position: sticky;
+                top: 10px;
+                z-index: 20;
+            }
+
+            .top-right-ui .ui-box {
+                min-width: 0;
+                flex: 1;
+                height: 40px;
+                font-size: .72rem;
+                padding: 0 10px;
+            }
+
+            .score-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 10px;
+            }
+
+            /* Mobile 2-column scoreboard layout:
+               Left: Ones–Sixes | Right: 3 of a Kind–Yatzy */
+            #row-ones {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            #row-twos {
+                grid-column: 1;
+                grid-row: 2;
+            }
+
+            #row-threes {
+                grid-column: 1;
+                grid-row: 3;
+            }
+
+            #row-fours {
+                grid-column: 1;
+                grid-row: 4;
+            }
+
+            #row-fives {
+                grid-column: 1;
+                grid-row: 5;
+            }
+
+            #row-sixes {
+                grid-column: 1;
+                grid-row: 6;
+            }
+
+            #row-threeKind {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            #row-fourKind {
+                grid-column: 2;
+                grid-row: 2;
+            }
+
+            #row-fullHouse {
+                grid-column: 2;
+                grid-row: 3;
+            }
+
+            #row-smStraight {
+                grid-column: 2;
+                grid-row: 4;
+            }
+
+            #row-lgStraight {
+                grid-column: 2;
+                grid-row: 5;
+            }
+
+            #row-yatzy {
+                grid-column: 2;
+                grid-row: 6;
+            }
+
+            .dice-area {
+                gap: 10px;
+                min-height: 70px;
+            }
+
+            .die {
+                width: min(16.5vw, 64px);
+                height: min(16.5vw, 64px);
+            }
+
+            .modal-content {
+                width: min(520px, calc(100vw - 36px));
+                padding: 22px 18px;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .difficulty-btn,
+            .info-trigger-btn,
+            .confirm-btn,
+            .cancel-btn,
+            .menu-btn {
+                width: 100%;
+                min-width: unset;
+            }
+
+            #lobby .menu-group {
+                flex-direction: column;
+            }
+
+            .score-item {
+                padding: 8px 10px;
+                gap: 8px;
+                min-height: 54px;
+            }
+
+            .score-btn span {
+                font-size: .9rem;
+            }
+
+            .category-icon,
+            .icon-placeholder {
+                width: 28px;
+                height: 28px;
+            }
+
+            .player-score,
+            .bot-score {
+                width: 38px;
+                height: 38px;
+                font-size: 1rem;
+            }
+
+            /* Mobile compact scoreboard so everything fits + bot score stays visible */
+            .score-grid {
+                gap: 6px;
+                padding: 8px;
+                overflow: hidden;
+                /* keep all rows visible instead of scrolling */
+            }
+
+            .score-item {
+                min-height: 30px;
+            }
+
+            .score-btn {
+                gap: 8px;
+            }
+
+            .score-btn span {
+                font-size: .82rem;
+                line-height: 1.05;
+                white-space: normal;
+            }
+
+            .score-values {
+                min-width: 72px;
+                gap: 6px;
+            }
+
+            .player-score,
+            .bot-score {
+                width: 32px;
+                height: 32px;
+                font-size: .92rem;
+                border-radius: 9px;
+            }
+
+            .category-icon,
+            .icon-placeholder {
+                width: 26px;
+                height: 26px;
+                border-radius: 7px;
+            }
+
+            .controls-box {
+                padding: 12px;
+            }
+
+            /* Mobile: icons + scores only (hide text labels) */
+            /* Mobile: enforce perfectly square dice (container + image) */
+            .dice-area {
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .die {
+                width: min(16.5vw, 64px) !important;
+                height: min(16.5vw, 64px) !important;
+                aspect-ratio: 1 / 1;
+                padding: 0 !important;
+            }
+
+            .die img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: contain;
+            }
+
+            /* Mobile alignment: center icon + score boxes within each score item */
+            .score-item {
+                display: flex;
+                align-items: center;
+            }
+
+            .score-btn {
+                display: flex;
+                align-items: center;
+            }
+
+            .score-values {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .player-score,
+            .bot-score {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Mobile dice: remove inner whitespace + enforce square visual */
+            .die {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                line-height: 0;
+            }
+
+            .die img {
+                display: block !important;
+                max-width: 92% !important;
+                max-height: 92% !important;
+            }
+
+            /* Mobile: tighter spacing between dice row and roll button */
+            .dice-area {
+                padding: 8px 10px;
+            }
+
+            #dice-container {
+                margin-bottom: 6px !important;
+            }
+
+            button#roll-btn {
+                margin-top: 6px !important;
+            }
+
+            /* Tablet & small screens (<=820px): keep labels, keep roll button like web */
+            button#roll-btn {
+                width: clamp(220px, 25%, 320px);
+                margin: 0 auto;
+                display: block;
+            }
+
+            /* Improve separation between top UI row and scores row */
+            .top-right-ui {
+                margin-bottom: 10px;
+            }
+
+            .scores {
+                margin-top: 6px;
+            }
+
+            /* Stronger vertical centering for icon + score boxes */
+            .score-item {
+                display: flex;
+                align-items: center;
+            }
+
+            .score-btn {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .category-icon,
+            .icon-placeholder {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .score-values {
+                display: inline-flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .player-score,
+            .bot-score {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Dice: enforce square and remove extra whitespace */
+            .die {
+                width: min(16.5vw, 64px) !important;
+                height: min(16.5vw, 64px) !important;
+                aspect-ratio: 1 / 1;
+                padding: 0 !important;
+                overflow: hidden;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                line-height: 0;
+            }
+
+            .die img {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover;
+                display: block !important;
+            }
+
+        }
+
+        @media (max-width: 520px) {
+
+            /* Phone-specific compression */
+            .top-right-ui {
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .scores {
+                margin-top: 10px;
+            }
+
+            /* Icons + scores only on phones */
+            .score-btn span {
+                display: none;
+            }
+
+            /* Slightly tighter rows (user may set min-height themselves) */
+            .score-grid {
+                gap: 6px;
+                padding: 8px;
+            }
+
+            /* Roll button full width on phones */
+            button#roll-btn {
+                width: 100%;
+                margin: 0;
+            }
+
+            /* Reduce gap between dice row and roll button */
+            #dice-container {
+                margin-bottom: 4px !important;
+            }
+
+            button#roll-btn {
+                margin-top: 4px !important;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <canvas id="fire-canvas"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></canvas>
+    <div id="party-overlay"></div>
+
+    <div id="turn-modal">
+        <div id="turn-modal-text" class="turn-modal-content">YOUR TURN</div>
+    </div>
+
+    <div id="hell-notification-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; flex-direction:column;">
+        <div class="modal-content" style="border: 1px solid rgba(255,59,92,.45);">
+            <h1 style="color: #ff3b5c; font-size: 2.6rem; margin: 0; letter-spacing: 2px;">WARNING</h1>
+            <p id="hell-level-text"
+                style="font-size: 1.2rem; color: rgba(233,237,246,.75); margin: 18px 0; font-weight: 800;"></p>
+            <button class="difficulty-btn hell" onclick="closeHellModal()" style="width: 100%;">I ACCEPT MY
+                FATE</button>
+        </div>
+    </div>
+
+    <div id="score-info-modal" onclick="this.style.display='none'">
+        <div class="modal-content">
+            <h2 id="score-info-title" style="margin-top: 0;">Category Name</h2>
+            <p id="score-info-desc" style="font-size: 1.05rem; line-height: 1.55;"></p>
+            <p style="font-size: 0.9rem; opacity:.7; margin-top: 18px;">(Click anywhere to close)</p>
+        </div>
+    </div>
+
+    <div id="reset-modal">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">Reset Game?</h2>
+            <p style="font-size: 1.0rem; margin-bottom: 18px;">Are you sure you want to quit? Your current
+                progress will be lost.</p>
+            <div class="btn-group">
+                <button class="confirm-btn" onclick="location.reload()">YES, RESET</button>
+                <button class="cancel-btn" onclick="toggleResetModal()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-modal">
+        <div class="modal-content">
+            <h1 id="result-title">GAME OVER</h1>
+            <p id="result-details" style="font-size: 1.05rem; margin-bottom: 16px;">Final Score: 0 vs 0</p>
+            <button class="difficulty-btn easy" onclick="location.reload()" style="width: 100%;">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <div id="info-modal">
+        <div class="modal-content">
+            <span style="position:absolute; top:14px; right:16px; cursor:pointer; font-size:1.4rem; opacity:.8;"
+                onclick="toggleInfo()">✖</span>
+            <h2 style="margin-top: 0;">Game Mechanics</h2>
+            <ul style="line-height: 1.6; text-align: left;">
+                <li><strong>Upper Section:</strong> Count and add only the specific face value.</li>
+                <li><strong>3 of a Kind:</strong> Total of all dice if 3 match.</li>
+                <li><strong>4 of a Kind:</strong> Total of all dice if 4 match.</li>
+                <li><strong>Full House:</strong> 25 pts for 3 of one kind + 2 of another.</li>
+                <li><strong>Small Straight:</strong> 30 pts for 4 sequential dice (e.g. 1-2-3-4).</li>
+                <li><strong>Large Straight:</strong> 40 pts for 5 sequential dice (e.g. 1-2-3-4-5).</li>
+                <li><strong>Yatzy:</strong> 50 pts for all 5 dice matching.</li>
+            </ul>
+            <p style="margin-top: 16px; font-weight: 800; opacity:.85;">
+                Created by: James Tercenio
+            </p>
+        </div>
+    </div>
+
+    <div id="lobby">
+        <div class="modal-content" style="max-width:560px; width:min(560px, 92vw);">
+            <img src="icons/logo.png" alt="Yatzy Royale Logo"
+                style="width: 170px; height: auto; margin-bottom: 6px; opacity: 0.96;">
+            <h1 style="font-size: clamp(2.2rem, 7vw, 3.6rem); margin: 0 0 6px; letter-spacing: -2px;">YATZY ROYALE</h1>
+            <p
+                style="opacity: 0.8; margin: 0 0 18px; font-weight: 900; letter-spacing: 2px; color: rgba(74,163,255,.85);">
+                PRO EDITION</p>
+
+            <div id="main-menu" class="menu-group" style="display:flex; flex-wrap:wrap; justify-content:center;">
+                <button class="difficulty-btn med" onclick="toggleLobbyView(true)">VS BOT</button>
+                <button class="difficulty-btn pvp" onclick="startGame('PVP')">PVP (Local)</button>
+                <button class="info-trigger-btn" onclick="toggleInfo()">Game Info</button>
+            </div>
+
+            <div id="difficulty-menu" class="menu-group hidden"
+                style="display:flex; flex-wrap:wrap; justify-content:center;">
+                <p
+                    style="width:100%; font-weight:900; opacity:.75; margin: 0 0 6px; text-transform: uppercase; letter-spacing: 2px;">
+                    Select Difficulty</p>
+                <button class="difficulty-btn easy" onclick="startGame('EASY')">Easy</button>
+                <button class="difficulty-btn med" onclick="startGame('MEDIUM')">Medium</button>
+                <button class="difficulty-btn hard" onclick="startGame('HARD')">Hard</button>
+                <button class="difficulty-btn hell" onclick="startGame('HELL')">HELL MODE</button>
+                <button class="cancel-btn" onclick="toggleLobbyView(false)">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+
+        <div class="top-right-ui">
+            <div class="ui-box" id="difficulty-display">EASY</div>
+            <button class="ui-box info-btn" onclick="toggleInfo()">GAME INFO</button>
+            <button id="mute-btn" class="ui-box mute-btn" onclick="toggleMute()">MUTE MUSIC</button>
+            <button class="ui-box reset-btn" onclick="toggleResetModal()">RESET GAME</button>
+        </div>
+
+        <div class="scores">
+            <span id="p1-label">YOU: <span id="p-total">0</span></span>
+            <span id="p2-label">BOT: <span id="b-total">0</span></span>
+        </div>
+
+        <div id="turn-banner" class="turn-indicator player-turn">YOUR TURN</div>
+
+        <div class="score-grid" id="score-container"></div>
+
+        <div class="controls-box">
+            <div class="dice-area" id="dice-container"></div>
+            <button id="roll-btn">ROLL DICE</button>
+            <div style="margin-top:12px; font-weight: 900; opacity:.8; text-align:center; letter-spacing: 2px;">
+                ROLLS LEFT: <span id="rolls-left">3</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let bgmInterval;
+        let isMusicMuted = false;
+        let currentDifficulty = 'EASY';
+        let isPVP = false;
+
+        let hellTemperature = Math.floor(Math.random() * 3) + 3;
+
+        const scoringRules = {
+            ones: "Count and add only the dice with the face '1'.",
+            twos: "Count and add only the dice with the face '2'.",
+            threes: "Count and add only the dice with the face '3'.",
+            fours: "Count and add only the dice with the face '4'.",
+            fives: "Count and add only the dice with the face '5'.",
+            sixes: "Count and add only the dice with the face '6'.",
+            threeKind: "Score the total sum of all 5 dice if at least 3 dice match.",
+            fourKind: "Score the total sum of all 5 dice if at least 4 dice match.",
+            fullHouse: "Score 25 points for 3 of one kind and 2 of another.",
+            smStraight: "Score 30 points for a sequence of 4 consecutive dice.",
+            lgStraight: "Score 40 points for a sequence of 5 consecutive dice.",
+            yatzy: "Score 50 points if all 5 dice match."
+        };
+
+        const diceImages = {
+            1: 'icons/dice_1.png', 2: 'icons/dice_2.png', 3: 'icons/dice_3.png',
+            4: 'icons/dice_4.png', 5: 'icons/dice_5.png', 6: 'icons/dice_6.png'
+        };
+
+        const categoryConfig = {
+            ones: { img: diceImages[1], label: 'Ones' },
+            twos: { img: diceImages[2], label: 'Twos' },
+            threes: { img: diceImages[3], label: 'Threes' },
+            fours: { img: diceImages[4], label: 'Fours' },
+            fives: { img: diceImages[5], label: 'Fives' },
+            sixes: { img: diceImages[6], label: 'Sixes' },
+            threeKind: { icon: '3x', label: '3 of a Kind' },
+            fourKind: { icon: '4x', label: '4 of a Kind' },
+            fullHouse: { icon: 'H', label: 'House' },
+            smStraight: { icon: 'S', label: 'Small' },
+            lgStraight: { icon: 'L', label: 'Large' },
+            yatzy: { icon: 'YZ', label: 'Yatzy' }
+        };
+
+        const categories = Object.keys(categoryConfig);
+        let dice = [1, 2, 3, 4, 5], locked = [false, false, false, false, false], rollsLeft = 3, isPlayerTurn = true;
+        let playerScores = {}, botScores = {};
+
+        // Mouse trail effect
+        var dots = [];
+        for (var i = 0; i < 28; i++) {
+            var node = document.createElement("div");
+            node.className = "trail";
+            document.body.appendChild(node);
+            dots.push(node);
+        }
+
+        var currentDot = 0;
+        addEventListener("mousemove", function (event) {
+            var dot = dots[currentDot];
+            dot.style.left = (event.clientX - 10) + "px";
+            dot.style.top = (event.clientY - 10) + "px";
+            currentDot = (currentDot + 1) % dots.length;
+        });
+        addEventListener("touchmove", function (event) {
+            if (event.touches.length > 0) {
+                var touch = event.touches[0];
+                var dot = dots[currentDot];
+                dot.style.left = (touch.clientX - 10) + "px";
+                dot.style.top = (touch.clientY - 10) + "px";
+                currentDot = (currentDot + 1) % dots.length;
+            }
+        });
+        addEventListener("mousedown", function (event) {
+            var radius = 30;
+            for (var i = 0; i < dots.length; i++) {
+                var angle = (i / dots.length) * 2 * Math.PI;
+                var x = event.clientX + Math.cos(angle) * radius;
+                var y = event.clientY + Math.sin(angle) * radius;
+                dots[i].style.left = (x - 10) + "px";
+                dots[i].style.top = (y - 10) + "px";
+            }
+        });
+        addEventListener("touchstart", function (event) {
+            if (event.touches.length > 0) {
+                var touch = event.touches[0];
+                var radius = 30;
+                for (var i = 0; i < dots.length; i++) {
+                    var angle = (i / dots.length) * 2 * Math.PI;
+                    var x = touch.clientX + Math.cos(angle) * radius;
+                    var y = touch.clientY + Math.sin(angle) * radius;
+                    dots[i].style.left = (x - 10) + "px";
+                    dots[i].style.top = (y - 10) + "px";
+                }
+            }
+        });
+
+        function toggleLobbyView(showDifficulty) {
+            const mainMenu = document.getElementById('main-menu');
+            const diffMenu = document.getElementById('difficulty-menu');
+            if (showDifficulty) {
+                mainMenu.classList.add('hidden');
+                diffMenu.classList.remove('hidden');
+            } else {
+                mainMenu.classList.remove('hidden');
+                diffMenu.classList.add('hidden');
+            }
+        }
+
+        function showScoreInfo(id) {
+            const modal = document.getElementById('score-info-modal');
+            const title = document.getElementById('score-info-title');
+            const desc = document.getElementById('score-info-desc');
+            title.textContent = categoryConfig[id].label;
+            desc.textContent = scoringRules[id];
+            modal.style.display = 'flex';
+        }
+
+        function toggleMute() {
+            isMusicMuted = !isMusicMuted;
+            const btn = document.getElementById('mute-btn');
+            btn.textContent = isMusicMuted ? "UNMUTE" : "MUTE MUSIC";
+            btn.style.background = isMusicMuted ? "rgba(148,163,184,.35)" : "rgba(155,123,255,.18)";
+        }
+
+        function showHellLevelModal(level) {
+            const modal = document.getElementById('hell-notification-modal');
+            const text = document.getElementById('hell-level-text');
+            text.textContent = `THAT WAS A HELL MODE LEVEL ${level}`;
+            modal.style.display = 'flex';
+        }
+
+        function closeHellModal() {
+            document.getElementById('hell-notification-modal').style.display = 'none';
+        }
+
+        function playSound(type) {
+            if (type === 'win') {
+                new Audio('sfx/win.mp3').play().catch(e => console.log("Audio play failed", e));
+                return;
+            }
+            if (type === 'lose') {
+                new Audio('sfx/lose.mp3').play().catch(e => console.log("Audio play failed", e));
+                return;
+            }
+            if (type === 'tie') {
+                new Audio('sfx/tie.mp3').play().catch(e => console.log("Audio play failed", e));
+                return;
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'roll') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                osc.start(); osc.stop(now + 0.1);
+            } else if (type === 'lock') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(); osc.stop(now + 0.1);
+            } else if (type === 'score') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523, now);
+                osc.frequency.exponentialRampToValueAtTime(1046, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now);
+                osc.start(); osc.stop(now + 0.3);
+            }
+        }
+
+        function startBGM() {
+            if (bgmInterval) return;
+            let tempo;
+            switch (currentDifficulty) {
+                case 'EASY': tempo = 450; break;
+                case 'MEDIUM': tempo = 350; break;
+                case 'HARD': tempo = 250; break;
+                case 'HELL': tempo = 150; break;
+                default: tempo = 450;
+            }
+            const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 349.23, 329.63, 293.66];
+            let step = 0;
+            bgmInterval = setInterval(() => {
+                if (isMusicMuted) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(notes[step % notes.length], audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                step++;
+            }, tempo);
+        }
+
+        function playVictoryMusic() { playSound('win'); }
+        function playLossMusic() { playSound('lose'); }
+        function playTieMusic() { playSound('tie'); }
+
+        function toggleInfo() {
+            const modal = document.getElementById('info-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleResetModal() {
+            const modal = document.getElementById('reset-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function showTurnModal(isP1) {
+            const modal = document.getElementById('turn-modal');
+            const content = document.getElementById('turn-modal-text');
+            if (isPVP) {
+                content.textContent = isP1 ? "PLAYER 1" : "PLAYER 2";
+                content.className = `turn-modal-content ${isP1 ? 'player-modal-bg' : 'p2-modal-bg'}`;
+            } else {
+                content.textContent = isP1 ? "YOUR TURN" : (currentDifficulty === 'HELL' ? "HELL'S TURN" : "BOT'S TURN");
+                content.className = `turn-modal-content ${isP1 ? 'player-modal-bg' : (currentDifficulty === 'HELL' ? 'hell-modal-bg' : 'bot-modal-bg')}`;
+            }
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.style.display = 'none'; }, 1200);
+        }
+
+        function renderDice() {
+            const container = document.getElementById('dice-container');
+            container.innerHTML = '';
+            dice.forEach((val, i) => {
+                const dieDiv = document.createElement('div');
+                dieDiv.className = `die ${locked[i] ? 'locked' : ''}`;
+                dieDiv.innerHTML = `<img src="${diceImages[val]}" alt="${val}">`;
+                dieDiv.onclick = () => {
+                    if ((isPVP || isPlayerTurn) && rollsLeft < 3 && rollsLeft > 0) {
+                        locked[i] = !locked[i];
+                        playSound('lock');
+                        renderDice();
+                    }
+                };
+                container.appendChild(dieDiv);
+            });
+        }
+
+        function startGame(diff) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            currentDifficulty = diff;
+            isPVP = (diff === 'PVP');
+
+            // Randomize who starts (Player 1/You or Bot/Player 2)
+            isPlayerTurn = Math.random() < 0.5;
+
+            hellTemperature = Math.floor(Math.random() * 3) + 3;
+            if (currentDifficulty === 'HELL') {
+                showHellLevelModal(hellTemperature);
+            }
+
+            document.body.className = diff.toLowerCase();
+            let trailColor, glowColor;
+            switch (diff) {
+                case 'EASY': trailColor = 'rgba(25, 210, 141, 0.25)';
+                    glowColor = 'rgba(25, 210, 141, 0.45)'; break;
+                case 'MEDIUM': trailColor = 'rgba(74, 163, 255, 0.25)';
+                    glowColor = 'rgba(74, 163, 255, 0.45)'; break;
+                case 'HARD': trailColor = 'rgba(255, 176, 32, 0.25)';
+                    glowColor = 'rgba(255, 176, 32, 0.45)'; break;
+                case 'HELL': trailColor = 'rgba(255, 59, 92, 0.25)';
+                    glowColor = 'rgba(255, 59, 92, 0.5)'; break;
+                case 'PVP': trailColor = 'rgba(155, 123, 255, 0.25)';
+                    glowColor = 'rgba(155, 123, 255, 0.5)'; break;
+            }
+            document.querySelectorAll('.trail').forEach(t => {
+                t.style.backgroundColor = trailColor;
+                t.style.boxShadow = `0 0 18px ${glowColor}`;
+            });
+            // Handle fire animation for Hell mode
+            const fireCanvas = document.getElementById('fire-canvas');
+            if (diff === 'HELL') {
+                fireCanvas.style.display = 'block';
+                initFireAnimation();
+            } else {
+                fireCanvas.style.display = 'none';
+                stopFireAnimation();
+            }
+
+            document.getElementById('lobby').style.display = 'none';
+            startBGM();
+            document.getElementById('difficulty-display').textContent = diff;
+            const p1Label = document.getElementById('p1-label');
+            const p2Label = document.getElementById('p2-label');
+
+            if (isPVP) {
+                p1Label.innerHTML = `P1: <span id="p-total">0</span>`;
+                p2Label.innerHTML = `P2: <span id="b-total">0</span>`;
+            } else {
+                p1Label.innerHTML = `YOU: <span id="p-total">0</span>`;
+                p2Label.innerHTML = diff === 'HELL' ? `HELL: <span id="b-total">0</span>` : `BOT: <span id="b-total">0</span>`;
+            }
+
+            initScoreboard();
+            renderDice();
+
+            // Set initial UI state and handle bot start if needed
+            resetTurnUI();
+            showTurnModal(isPlayerTurn);
+
+            if (!isPlayerTurn && !isPVP) {
+                document.getElementById('roll-btn').disabled = true;
+                setTimeout(botTurn, 1500); // Give time for the "Turn" modal to show
+            } else {
+                document.getElementById('roll-btn').disabled = false;
+            }
+        }
+
+        document.getElementById('roll-btn').onclick = async () => {
+            if (rollsLeft > 0) await performRoll();
+        };
+
+        function calculateScore(diceArr, id) {
+            const counts = {};
+            diceArr.forEach(d => counts[d] = (counts[d] || 0) + 1);
+            const sum = diceArr.reduce((a, b) => a + b, 0);
+            const vals = Object.values(counts);
+            const unique = [...new Set(diceArr)].sort();
+            const checkStr = (arr, len) => {
+                let max = 1, cur = 1;
+                for (let i = 0; i < arr.length - 1; i++) {
+                    if (arr[i + 1] === arr[i] + 1) { cur++; max = Math.max(max, cur); }
+                    else if (arr[i + 1] !== arr[i]) { cur = 1; }
+                }
+                return max >= len;
+            };
+            switch (id) {
+                case 'ones': return (counts[1] || 0) * 1;
+                case 'twos': return (counts[2] || 0) * 2;
+                case 'threes': return (counts[3] || 0) * 3;
+                case 'fours': return (counts[4] || 0) * 4;
+                case 'fives': return (counts[5] || 0) * 5;
+                case 'sixes': return (counts[6] || 0) * 6;
+                case 'threeKind': return vals.some(v => v >= 3) ? sum : 0;
+                case 'fourKind': return vals.some(v => v >= 4) ? sum : 0;
+                case 'fullHouse': return (vals.includes(3) && vals.includes(2)) ? 25 : 0;
+                case 'smStraight': return checkStr(unique, 4) ? 30 : 0;
+                case 'lgStraight': return checkStr(unique, 5) ? 40 : 0;
+                case 'yatzy': return vals.includes(5) ? 50 : 0;
+                default: return 0;
+            }
+        }
+
+        function updatePotentials() {
+            categories.forEach(id => {
+                if (isPlayerTurn) {
+                    if (playerScores[id] === undefined) {
+                        const el = document.getElementById(`p-${id}`);
+                        el.textContent = calculateScore(dice, id);
+                        el.className = 'player-score potential';
+                    }
+                } else if (isPVP) {
+                    if (botScores[id] === undefined) {
+                        const el = document.getElementById(`b-${id}`);
+                        el.textContent = calculateScore(dice, id);
+                        el.className = 'bot-score potential pvp-p2-score';
+                    }
+                }
+            });
+        }
+
+        function endTurn() {
+            const p1Total = Object.values(playerScores).reduce((a, b) => a + b, 0);
+            const p2Total = Object.values(botScores).reduce((a, b) => a + b, 0);
+            document.getElementById('p-total').textContent = p1Total;
+            document.getElementById('b-total').textContent = p2Total;
+            if (Object.keys(playerScores).length === categories.length && Object.keys(botScores).length === categories.length) {
+                showResult();
+                return;
+            }
+            isPlayerTurn = !isPlayerTurn;
+            resetTurnUI();
+            showTurnModal(isPlayerTurn);
+            if (!isPlayerTurn && !isPVP) {
+                document.getElementById('roll-btn').disabled = true;
+                setTimeout(botTurn, 1000);
+            } else {
+                document.getElementById('roll-btn').disabled = false;
+            }
+        }
+
+        function resetTurnUI() {
+            rollsLeft = 3;
+            locked = [false, false, false, false, false];
+            document.getElementById('rolls-left').textContent = 3;
+            const banner = document.getElementById('turn-banner');
+            if (isPVP) {
+                banner.textContent = isPlayerTurn ? "PLAYER 1 TURN" : "PLAYER 2 TURN";
+                banner.className = `turn-indicator ${isPlayerTurn ? 'player-turn' : 'p2-turn'}`;
+            } else {
+                banner.textContent = isPlayerTurn ? "YOUR TURN" : (currentDifficulty === 'HELL' ? "HELL IS THINKING..." : "BOT IS THINKING...");
+                banner.className = `turn-indicator ${isPlayerTurn ? 'player-turn' : (currentDifficulty === 'HELL' ? 'hell-turn' : 'bot-turn')}`;
+            }
+            document.querySelectorAll('.potential').forEach(el => {
+                el.textContent = '-';
+                el.classList.remove('potential');
+            });
+            renderDice();
+        }
+
+        let hoverTimer = null;
+
+        function initScoreboard() {
+            const container = document.getElementById('score-container');
+            container.innerHTML = '';
+            categories.forEach(id => {
+                const conf = categoryConfig[id];
+                const iconHtml = conf.img ? `<img src="${conf.img}" class="category-icon">` : `<div class="icon-placeholder">${conf.icon}</div>`;
+                const item = document.createElement('div');
+                item.className = 'score-item';
+                item.id = `row-${id}`;
+                item.onmouseenter = () => {
+                    const currentScores = isPlayerTurn ? playerScores : botScores;
+                    if (currentScores[id] !== undefined) return;
+                    if (rollsLeft === 3 && (isPVP || isPlayerTurn)) {
+                        item.classList.add('can-hover');
+                        hoverTimer = setTimeout(() => showScoreInfo(id), 2000);
+                    }
+                };
+                item.onmouseleave = () => {
+                    item.classList.remove('can-hover');
+                    if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+                };
+                item.onclick = () => playerSelect(id);
+                item.innerHTML = `
+            <button class="score-btn" id="btn-${id}">
+                ${iconHtml} <span>${conf.label}</span>
+            </button>
+            <div class="score-values">
+                <span class="player-score" id="p-${id}">-</span>
+                <span class="bot-score" id="b-${id}">-</span>
+            </div>`;
+                container.appendChild(item);
+            });
+        }
+
+        async function playerSelect(id) {
+            if (!isPVP && !isPlayerTurn) return;
+            const currentScores = isPlayerTurn ? playerScores : botScores;
+
+            if (rollsLeft === 3) {
+                if (currentScores[id] !== undefined) return;
+                const item = document.getElementById(`row-${id}`);
+                if (item) item.classList.add('can-hover');
+                await new Promise(res => setTimeout(res, 200));
+                await performRoll();
+                return;
+            }
+
+            if (currentScores[id] !== undefined) return;
+            if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+
+            const scoreValue = calculateScore(dice, id);
+            currentScores[id] = scoreValue;
+            const scorePrefix = isPlayerTurn ? 'p-' : 'b-';
+            const scoreElement = document.getElementById(`${scorePrefix}${id}`);
+            if (scoreElement) {
+                scoreElement.textContent = scoreValue;
+                scoreElement.classList.remove('potential');
+            }
+            const rowEl = document.getElementById(`row-${id}`);
+            const btnEl = document.getElementById(`btn-${id}`);
+            if (rowEl) rowEl.classList.add('taken');
+            if (btnEl) btnEl.style.opacity = '0.4';
+
+            playSound('score');
+            endTurn();
+
+            if (isPVP) {
+                setTimeout(() => {
+                    const nextPlayerScores = isPlayerTurn ? playerScores : botScores;
+                    const row = document.getElementById(`row-${id}`);
+                    const btn = document.getElementById(`btn-${id}`);
+                    if (row && btn && nextPlayerScores[id] === undefined) {
+                        row.classList.remove('taken');
+                        btn.style.opacity = '1.0';
+                    }
+                }, 10);
+            }
+        }
+
+        async function performRoll() {
+            const rollBtn = document.getElementById('roll-btn');
+            if (rollsLeft <= 0) return;
+            rollBtn.disabled = true;
+            rollsLeft--;
+            document.getElementById('rolls-left').textContent = rollsLeft;
+            const diceEls = document.querySelectorAll('.die');
+            diceEls.forEach((el, i) => { if (!locked[i]) el.classList.add('rolling'); });
+            let rollsCount = 0;
+            const rollInterval = setInterval(() => {
+                playSound('roll');
+                if (++rollsCount > 5) clearInterval(rollInterval);
+            }, 80);
+            await new Promise(res => setTimeout(res, 600));
+
+            if (!isPlayerTurn && !isPVP && currentDifficulty === 'HELL') {
+                const avail = categories.filter(id => botScores[id] === undefined);
+
+                if (hellTemperature >= 5) {
+                    let targetDice = [6, 6, 6, 6, 6]; // Default
+
+                    if (avail.includes('yatzy')) {
+                        targetDice = [6, 6, 6, 6, 6];
+                    } else if (avail.includes('lgStraight')) {
+                        targetDice = [1, 2, 3, 4, 5];
+                    } else if (avail.includes('smStraight')) {
+                        targetDice = [1, 2, 3, 4, 6];
+                    } else if (avail.includes('sixes')) {
+                        targetDice = [6, 6, 6, 6, 6];
+                    } else if (avail.includes('fives')) {
+                        targetDice = [5, 5, 5, 5, 5];
+                    } else if (avail.includes('fours')) {
+                        targetDice = [4, 4, 4, 4, 4];
+                    } else if (avail.includes('threes')) {
+                        targetDice = [3, 3, 3, 3, 3];
+                    } else if (avail.includes('twos')) {
+                        targetDice = [2, 2, 2, 2, 2];
+                    } else if (avail.includes('ones')) {
+                        targetDice = [1, 1, 1, 1, 1];
+                    } else if (avail.includes('fullHouse')) {
+                        targetDice = [6, 6, 6, 5, 5];
+                    } else if (avail.includes('fourKind')) {
+                        targetDice = [6, 6, 6, 6, 6];
+                    } else if (avail.includes('threeKind')) {
+                        targetDice = [6, 6, 6, 6, 6];
+                    }
+
+                    dice = [...targetDice];
+                    locked.fill(true);
+                } else {
+                    const cheatChance = (hellTemperature - 1) * 0.25;
+                    dice = dice.map((v, i) => {
+                        if (locked[i]) return v;
+                        return Math.random() < cheatChance ? (Math.random() > 0.5 ? 6 : 5) : Math.floor(Math.random() * 6) + 1;
+                    });
+                }
+            } else {
+                dice = dice.map((v, i) => locked[i] ? v : Math.floor(Math.random() * 6) + 1);
+            }
+            diceEls.forEach(el => el.classList.remove('rolling'));
+            renderDice();
+            if (isPVP || isPlayerTurn) {
+                updatePotentials();
+                if (rollsLeft > 0) rollBtn.disabled = false;
+            }
+        }
+
+        async function botTurn() {
+            if (currentDifficulty === 'HELL' && hellTemperature >= 5) locked.fill(false);
+            await performRoll();
+            if (currentDifficulty !== 'EASY') {
+                for (let r = 0; r < 2; r++) {
+                    await new Promise(res => setTimeout(res, 800));
+                    botDecideLocks();
+                    if (locked.every(l => l)) break;
+                    await performRoll();
+                }
+            }
+            await new Promise(res => setTimeout(res, 800));
+            const avail = categories.filter(id => botScores[id] === undefined);
+            let bestCat = null, maxScore = -1;
+            avail.forEach(id => {
+                let s = calculateScore(dice, id);
+                if (currentDifficulty === 'HARD' || currentDifficulty === 'HELL') {
+                    if (id === 'yatzy' && s > 0) s += 500;
+                    if (['fours', 'fives', 'sixes'].includes(id)) s += (s * 1.5);
+                }
+                if (s > maxScore) { maxScore = s; bestCat = id; }
+            });
+            if (!bestCat) bestCat = avail[0];
+            botScores[bestCat] = calculateScore(dice, bestCat);
+            const scoreDisplay = document.getElementById(`b-${bestCat}`);
+            if (scoreDisplay) scoreDisplay.textContent = botScores[bestCat];
+            const row = document.getElementById(`row-${bestCat}`);
+            const btn = document.getElementById(`btn-${bestCat}`);
+            if (playerScores[bestCat] !== undefined) {
+                if (row) row.classList.add('taken');
+                if (btn) btn.style.opacity = '0.4';
+            }
+            setTimeout(() => { playSound('score'); endTurn(); }, 1000);
+        }
+
+        function botDecideLocks() {
+            if (currentDifficulty === 'HELL' && hellTemperature >= 5) {
+                locked.fill(true); renderDice(); return;
+            }
+            const counts = {};
+            dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
+            let bestFace = 1, maxCount = 0;
+            for (let face in counts) {
+                if (counts[face] > maxCount) { maxCount = counts[face]; bestFace = parseInt(face); }
+            }
+            if (currentDifficulty === 'HARD' || currentDifficulty === 'HELL') {
+                const unique = [...new Set(dice)].sort();
+                if (unique.length >= 4) {
+                    let used = new Set();
+                    dice.forEach((v, i) => { if (!used.has(v)) { locked[i] = true; used.add(v); } });
+                    renderDice(); return;
+                }
+            }
+            if (maxCount >= 2) {
+                dice.forEach((val, i) => { if (val === bestFace) locked[i] = true; });
+            }
+            renderDice();
+        }
+
+        function showResult() {
+            clearInterval(bgmInterval);
+            const p1Total = Object.values(playerScores).reduce((a, b) => a + b, 0);
+            const p2Total = Object.values(botScores).reduce((a, b) => a + b, 0);
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('result-title');
+            const overlay = document.getElementById('party-overlay');
+
+            if (p1Total > p2Total) {
+                title.textContent = isPVP ? "PLAYER 1 WINS!" : "YOU WIN!";
+                overlay.classList.add('disco-active');
+                if (!isMusicMuted) playVictoryMusic();
+            } else if (p2Total > p1Total) {
+                title.textContent = isPVP ? "PLAYER 2 WINS!" : "YOU LOSE!";
+                overlay.classList.remove('disco-active');
+                if (!isMusicMuted) isPVP ? playVictoryMusic() : playLossMusic();
+            } else {
+                title.textContent = "IT'S A TIE!";
+                overlay.classList.remove('disco-active');
+                if (!isMusicMuted) playTieMusic();
+            }
+            document.getElementById('result-details').textContent = isPVP ? `P1: ${p1Total} | P2: ${p2Total}` : `You: ${p1Total} | Bot: ${p2Total}`;
+            modal.style.display = 'flex';
+        }
+
+        // Fire animation for Hell mode
+        let fireAnimation = null;
+
+        class FireAnimation {
+            constructor() {
+                this.canvas = document.getElementById('fire-canvas');
+                this.ctx = this.canvas.getContext('2d');
+
+                this.resizeCanvas();
+                window.addEventListener('resize', this.resizeCanvas.bind(this));
+
+                this.particles = [];
+                this.paletteBase = [
+                    { r: 245, g: 167, b: 66 },    // Gold
+                    { r: 232, g: 90, b: 25 },     // Orange
+                    { r: 255, g: 62, b: 0 },      // Bright red-orange
+                    { r: 191, g: 34, b: 34 },     // Deep red
+                    { r: 80, g: 20, b: 70 }       // Purple shadow
+                ];
+
+                this.palette = [...this.paletteBase];
+                this.time = 0;
+                this.lastUpdateTime = 0;
+
+                this.createParticles();
+                this.animate();
+
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this));
+            }
+
+            resizeCanvas() {
+                if (window.innerWidth < 768) {
+                    // Mobile: position within game-container
+                    this.canvas.style.position = 'absolute';
+                    this.canvas.style.top = '0';
+                    this.canvas.style.left = '0';
+                    this.canvas.style.width = '100%';
+                    this.canvas.style.height = '100%';
+                    this.canvas.style.zIndex = '11';
+                    this.canvas.style.pointerEvents = 'none';
+                    // Move canvas to game-container
+                    const container = document.querySelector('.game-container');
+                    if (container && !container.contains(this.canvas)) {
+                        container.appendChild(this.canvas);
+                    }
+                } else {
+                    // Desktop: full screen background
+                    this.canvas.style.position = 'fixed';
+                    this.canvas.style.top = '0';
+                    this.canvas.style.left = '0';
+                    this.canvas.style.width = '100%';
+                    this.canvas.style.height = '100%';
+                    this.canvas.style.zIndex = '0';
+                    this.canvas.style.pointerEvents = 'none';
+                    // Move canvas back to body
+                    if (!document.body.contains(this.canvas)) {
+                        document.body.appendChild(this.canvas);
+                    }
+                }
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+
+            createParticles() {
+                const particleCount = Math.floor(this.canvas.width * this.canvas.height / 3000);
+
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: this.canvas.height + Math.random() * 100,
+                        size: 5 + Math.random() * 25,
+                        opacity: 0.1 + Math.random() * 0.5,
+                        speedX: (Math.random() - 0.5) * 1.5,
+                        speedY: -1.5 - Math.random() * 3,
+                        colorIndex: Math.floor(Math.random() * this.palette.length),
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.02,
+                        sway: 0.3 + Math.random() * 0.5,
+                        swaySpeed: 0.005 + Math.random() * 0.01,
+                        swayOffset: Math.random() * Math.PI * 2,
+                        lifespan: 100 + Math.random() * 200
+                    });
+                }
+            }
+
+            animate(currentTime = 0) {
+                const deltaTime = currentTime - this.lastUpdateTime;
+                this.lastUpdateTime = currentTime;
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.time += 0.01;
+                this.updatePalette();
+                this.updateParticles(deltaTime);
+
+                if (this.particles.length < 100) {
+                    this.createParticles();
+                }
+
+                requestAnimationFrame(this.animate.bind(this));
+            }
+
+            updatePalette() {
+                this.palette = this.paletteBase.map((color, index) => {
+                    const t = this.time + index * 0.5;
+                    const variation = 20;
+
+                    return {
+                        r: Math.min(255, Math.max(0, color.r + Math.sin(t) * variation)),
+                        g: Math.min(255, Math.max(0, color.g + Math.sin(t + 1) * variation)),
+                        b: Math.min(255, Math.max(0, color.b + Math.sin(t + 2) * variation))
+                    };
+                });
+            }
+
+            updateParticles(deltaTime) {
+                for (let i = 0; i < this.particles.length; i++) {
+                    const p = this.particles[i];
+
+                    p.x += p.speedX + Math.sin(this.time * p.swaySpeed + p.swayOffset) * p.sway;
+                    p.y += p.speedY;
+                    p.rotation += p.rotationSpeed;
+                    p.lifespan -= 1;
+
+                    const lifeFactor = p.lifespan / 300;
+                    const currentSize = p.size * lifeFactor;
+                    const currentOpacity = p.opacity * lifeFactor;
+
+                    if (p.lifespan > 0) {
+                        this.drawBrushstroke(p.x, p.y, currentSize, p.rotation, this.palette[p.colorIndex], currentOpacity);
+                    }
+
+                    if (p.lifespan <= 0 || p.y < -100) {
+                        this.particles[i] = {
+                            x: Math.random() * this.canvas.width,
+                            y: this.canvas.height + Math.random() * 50,
+                            size: 5 + Math.random() * 25,
+                            opacity: 0.1 + Math.random() * 0.5,
+                            speedX: (Math.random() - 0.5) * 1.5,
+                            speedY: -1.5 - Math.random() * 3,
+                            colorIndex: Math.floor(Math.random() * this.palette.length),
+                            rotation: Math.random() * Math.PI * 2,
+                            rotationSpeed: (Math.random() - 0.5) * 0.02,
+                            sway: 0.3 + Math.random() * 0.5,
+                            swaySpeed: 0.005 + Math.random() * 0.01,
+                            swayOffset: Math.random() * Math.PI * 2,
+                            lifespan: 100 + Math.random() * 200
+                        };
+                    }
+                }
+            }
+
+            drawBrushstroke(x, y, size, rotation, color, opacity) {
+                this.ctx.save();
+                this.ctx.translate(x, y);
+                this.ctx.rotate(rotation);
+
+                const gradient = this.ctx.createLinearGradient(0, -size, 0, size);
+                gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+                gradient.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, ${opacity})`);
+                gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+
+                this.ctx.fillStyle = gradient;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(-size / 3, -size);
+                this.ctx.quadraticCurveTo(size / 2, 0, -size / 3, size);
+                this.ctx.quadraticCurveTo(size / 2, 0, size / 3, -size / 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+
+                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${opacity * 0.7})`;
+                this.ctx.beginPath();
+                this.ctx.ellipse(size / 6, 0, size / 4, size / 2, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                this.ctx.restore();
+            }
+
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                for (let i = 0; i < 3; i++) {
+                    const offsetX = (Math.random() - 0.5) * 50;
+                    const offsetY = (Math.random() - 0.5) * 50;
+
+                    this.particles.push({
+                        x: mouseX + offsetX,
+                        y: mouseY + offsetY,
+                        size: 10 + Math.random() * 20,
+                        opacity: 0.2 + Math.random() * 0.4,
+                        speedX: (Math.random() - 0.5) * 2,
+                        speedY: -2 - Math.random() * 2,
+                        colorIndex: Math.floor(Math.random() * this.palette.length),
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() - 0.5) * 0.03,
+                        sway: 0.3 + Math.random() * 0.5,
+                        swaySpeed: 0.005 + Math.random() * 0.01,
+                        swayOffset: Math.random() * Math.PI * 2,
+                        lifespan: 50 + Math.random() * 100
+                    });
+                }
+            }
+
+            handleTouchMove(e) {
+                if (e.touches.length > 0) {
+                    const touch = e.touches[0];
+                    const rect = this.canvas.getBoundingClientRect();
+                    const touchX = touch.clientX - rect.left;
+                    const touchY = touch.clientY - rect.top;
+
+                    for (let i = 0; i < 3; i++) {
+                        const offsetX = (Math.random() - 0.5) * 50;
+                        const offsetY = (Math.random() - 0.5) * 50;
+
+                        this.particles.push({
+                            x: touchX + offsetX,
+                            y: touchY + offsetY,
+                            size: 10 + Math.random() * 20,
+                            opacity: 0.2 + Math.random() * 0.4,
+                            speedX: (Math.random() - 0.5) * 2,
+                            speedY: -2 - Math.random() * 2,
+                            colorIndex: Math.floor(Math.random() * this.palette.length),
+                            rotation: Math.random() * Math.PI * 2,
+                            rotationSpeed: (Math.random() - 0.5) * 0.03,
+                            sway: 0.3 + Math.random() * 0.5,
+                            swaySpeed: 0.005 + Math.random() * 0.01,
+                            swayOffset: Math.random() * Math.PI * 2,
+                            lifespan: 50 + Math.random() * 100
+                        });
+                    }
+                }
+            }
+        }
+
+        function initFireAnimation() {
+            if (fireAnimation) {
+                fireAnimation = null;
+            }
+            fireAnimation = new FireAnimation();
+        }
+
+        function stopFireAnimation() {
+            if (fireAnimation) {
+                fireAnimation = null;
+                const canvas = document.getElementById('fire-canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+    </script>
+</body>
+
+</html>
