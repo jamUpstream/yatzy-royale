@@ -48,6 +48,7 @@ body {
     margin: 0;
     padding: 0;
     width: 100%;
+    overflow-x: hidden;
 }
 
 body {
@@ -61,6 +62,8 @@ body {
     overflow-y: auto;
     padding: 20px 10px;
     position: relative;
+    max-width: 100vw;
+    box-sizing: border-box;
 }
 
 /* Animated orb background */
@@ -117,6 +120,7 @@ body::after {
     z-index: 10;
     margin: auto;
     transition: box-shadow 0.6s ease;
+    box-sizing: border-box;
 }
 
 /* ============================
@@ -134,7 +138,11 @@ body::after {
     color: white;
     text-align: center;
     padding: 30px 20px;
+    overflow-x: hidden;
     overflow-y: auto;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
 }
 
 /* lobby orb */
@@ -1399,3 +1407,225 @@ body.pvp {
         font-size: 0.98rem;
     }
 }
+/* ============================
+   INTRO ANIMATION
+   ============================ */
+#intro-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #02040a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+}
+
+#intro-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.55;
+}
+
+#intro-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* Dice row */
+#intro-dice-row {
+    display: flex;
+    gap: clamp(8px, 3vw, 18px);
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 420px;
+}
+
+.intro-die {
+    width: clamp(44px, 13vw, 64px);
+    height: clamp(44px, 13vw, 64px);
+    opacity: 0;
+    transform: translateY(60px) rotate(-20deg) scale(0.5);
+    transition: none;
+    flex-shrink: 0;
+}
+
+.intro-die svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.8));
+}
+
+.intro-die svg rect {
+    fill: rgba(14, 30, 55, 0.9);
+    stroke: rgba(56, 189, 248, 0.85);
+    stroke-width: 3;
+}
+
+.intro-die svg circle {
+    fill: #38bdf8;
+    filter: url(#dot-glow);
+}
+
+.intro-die.show {
+    animation: dieEntrance 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.intro-die.final {
+    animation: diePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dieEntrance {
+    0%   { opacity: 0; transform: translateY(60px) rotate(-20deg) scale(0.5); }
+    60%  { opacity: 1; transform: translateY(-10px) rotate(4deg) scale(1.08); }
+    100% { opacity: 1; transform: translateY(0px) rotate(0deg) scale(1); }
+}
+
+@keyframes diePulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(56,189,248,0.5)); }
+    50%       { filter: drop-shadow(0 0 28px rgba(56,189,248,1)); }
+}
+
+/* Title block */
+#intro-logo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    width: 100%;
+    text-align: center;
+}
+
+#intro-logo-wrap.show {
+    animation: logoReveal 1s ease forwards;
+}
+
+@keyframes logoReveal {
+    0%   { opacity: 0; transform: scale(0.85) translateY(20px); filter: blur(16px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+#intro-tag {
+    font-family: 'Exo 2', sans-serif;
+    font-size: clamp(0.5rem, 2vw, 0.65rem);
+    font-weight: 600;
+    letter-spacing: clamp(3px, 1.5vw, 6px);
+    color: rgba(56, 189, 248, 0.5);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+#intro-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(2.2rem, 11vw, 7rem);
+    font-weight: 700;
+    letter-spacing: clamp(3px, 1.5vw, 10px);
+    line-height: 1;
+    background: linear-gradient(135deg, #ffffff 0%, #38bdf8 55%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    position: relative;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+#intro-royale {
+    background: linear-gradient(135deg, #a78bfa 0%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+#intro-subtitle {
+    font-family: 'Exo 2', sans-serif;
+    font-size: clamp(0.6rem, 2vw, 0.8rem);
+    font-weight: 700;
+    letter-spacing: clamp(4px, 2vw, 9px);
+    color: rgba(56, 189, 248, 0.75);
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+/* Scanline */
+#intro-scanline {
+    position: absolute;
+    top: -100%;
+    left: -10%;
+    right: -10%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(56,189,248,0.6), rgba(255,255,255,0.5), rgba(56,189,248,0.6), transparent);
+    box-shadow: 0 0 30px rgba(56,189,248,0.9);
+    pointer-events: none;
+    opacity: 0;
+}
+
+#intro-scanline.sweep {
+    animation: scanSweep 0.9s ease-in forwards;
+}
+
+@keyframes scanSweep {
+    0%   { top: -10%; opacity: 1; }
+    100% { top: 110%; opacity: 0.3; }
+}
+
+/* Skip hint */
+#intro-skip {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Exo 2', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 4px;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    animation: skipBlink 2s ease-in-out infinite;
+    z-index: 3;
+}
+
+@keyframes skipBlink {
+    0%, 100% { opacity: 0.3; }
+    50%       { opacity: 0.7; }
+}
+
+/* Exit animation */
+#intro-screen.exit {
+    animation: introExit 0.85s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes introExit {
+    0%   { opacity: 1; transform: scale(1); }
+    40%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 0; transform: scale(1.12); pointer-events: none; }
+}
+
+/* Lobby starts hidden, fades in after intro */
+#lobby.intro-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+#lobby.intro-visible {
+    animation: lobbyFadeIn 0.7s ease 0.3s forwards;
+}
+@keyframes lobbyFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; pointer-events: auto; }
+}
+

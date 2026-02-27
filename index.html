@@ -11,6 +11,27 @@
 
 <body>
 
+    <!-- INTRO ANIMATION -->
+    <div id="intro-screen">
+        <canvas id="intro-canvas"></canvas>
+        <div id="intro-content">
+            <div id="intro-dice-row">
+                <div class="intro-die" id="idie-1"><svg viewBox="0 0 100 100"><rect rx="18" width="100" height="100"/><circle cx="50" cy="50" r="9"/></svg></div>
+                <div class="intro-die" id="idie-2"><svg viewBox="0 0 100 100"><rect rx="18" width="100" height="100"/><circle cx="28" cy="28" r="9"/><circle cx="72" cy="72" r="9"/></svg></div>
+                <div class="intro-die" id="idie-3"><svg viewBox="0 0 100 100"><rect rx="18" width="100" height="100"/><circle cx="28" cy="28" r="9"/><circle cx="50" cy="50" r="9"/><circle cx="72" cy="72" r="9"/></svg></div>
+                <div class="intro-die" id="idie-4"><svg viewBox="0 0 100 100"><rect rx="18" width="100" height="100"/><circle cx="28" cy="28" r="9"/><circle cx="72" cy="28" r="9"/><circle cx="28" cy="72" r="9"/><circle cx="72" cy="72" r="9"/></svg></div>
+                <div class="intro-die" id="idie-5"><svg viewBox="0 0 100 100"><rect rx="18" width="100" height="100"/><circle cx="28" cy="28" r="9"/><circle cx="72" cy="28" r="9"/><circle cx="50" cy="50" r="9"/><circle cx="28" cy="72" r="9"/><circle cx="72" cy="72" r="9"/></svg></div>
+            </div>
+            <div id="intro-logo-wrap">
+                <div id="intro-tag">JAMES TERCENIO PRESENTS</div>
+                <div id="intro-title">YATZY<span id="intro-royale"> ROYALE</span></div>
+                <div id="intro-subtitle">PRO EDITION</div>
+            </div>
+            <div id="intro-scanline"></div>
+        </div>
+        <div id="intro-skip">TAP TO SKIP</div>
+    </div>
+
     <canvas id="fire-canvas" style="display: none;"></canvas>
     <div id="party-overlay"></div>
 
@@ -135,6 +156,96 @@
 
     </div>
 
+    <script>
+    /* =====================
+       INTRO ANIMATION
+       ===================== */
+    (function() {
+        const intro    = document.getElementById('intro-screen');
+        const lobby    = document.getElementById('lobby');
+        const canvas   = document.getElementById('intro-canvas');
+        const ctx      = canvas.getContext('2d');
+        const dice     = document.querySelectorAll('.intro-die');
+        const logoWrap = document.getElementById('intro-logo-wrap');
+        const scanline = document.getElementById('intro-scanline');
+
+        lobby.classList.add('intro-hidden');
+
+        function resizeCanvas() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const particles = Array.from({ length: 80 }, () => ({
+            x:  Math.random() * window.innerWidth,
+            y:  Math.random() * window.innerHeight,
+            r:  Math.random() * 1.4 + 0.3,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            a:  Math.random() * 0.7 + 0.15,
+        }));
+
+        let animFrame;
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(56,189,248,0.045)';
+            ctx.lineWidth = 1;
+            const step = 60;
+            for (let x = 0; x < canvas.width;  x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+            for (let y = 0; y < canvas.height; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+            ctx.restore();
+        }
+        function drawAll() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width*0.65);
+            g.addColorStop(0, 'rgba(56,189,248,0.09)');
+            g.addColorStop(1, 'transparent');
+            ctx.fillStyle = g; ctx.fillRect(0,0,canvas.width,canvas.height);
+            drawGrid();
+            particles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x<0) p.x=canvas.width; if (p.x>canvas.width) p.x=0;
+                if (p.y<0) p.y=canvas.height; if (p.y>canvas.height) p.y=0;
+                ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+                ctx.fillStyle = `rgba(56,189,248,${p.a})`; ctx.fill();
+            });
+            animFrame = requestAnimationFrame(drawAll);
+        }
+        drawAll();
+
+        let done = false;
+        function dismissIntro() {
+            if (done) return; done = true;
+            cancelAnimationFrame(animFrame);
+            intro.classList.add('exit');
+            lobby.classList.remove('intro-hidden');
+            lobby.classList.add('intro-visible');
+            setTimeout(() => { intro.style.display = 'none'; }, 900);
+        }
+        intro.addEventListener('click', dismissIntro);
+        intro.addEventListener('touchstart', dismissIntro, { passive: true });
+
+        // Dice appear one by one
+        let delay = 320;
+        dice.forEach((die, i) => setTimeout(() => die.classList.add('show'), delay + i * 130));
+
+        // Dice settle into pulse
+        setTimeout(() => {
+            dice.forEach(d => { d.classList.remove('show'); d.style.opacity='1'; d.style.transform='none'; d.classList.add('final'); });
+        }, delay + dice.length * 130 + 200);
+
+        // Scanline sweep
+        setTimeout(() => scanline.classList.add('sweep'), delay + dice.length * 130 + 360);
+
+        // Logo reveal
+        setTimeout(() => logoWrap.classList.add('show'), delay + dice.length * 130 + 520);
+
+        // Auto dismiss
+        setTimeout(dismissIntro, 4000);
+    })();
+    </script>
     <script src="script.js"></script>
 
 </body>
